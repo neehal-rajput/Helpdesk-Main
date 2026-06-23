@@ -1,0 +1,31 @@
+# ============================================================
+# service.yaml
+# Exposes your HelpDesk app so you can access it from a browser.
+# Type NodePort = accessible from OUTSIDE the cluster (your browser).
+# Type ClusterIP (used for MySQL) = only inside the cluster.
+# ============================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: helpdesk-service       # Name used to reference this service
+  namespace: default
+  labels:
+    app: helpdesk-app
+spec:
+  type: NodePort               # Makes the app accessible from outside Minikube
+  selector:
+    app: helpdesk-app          # Forward traffic to pods with label app=helpdesk-app
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80                 # Port exposed on the Service (internal cluster port)
+      targetPort: 8081         # Port your Spring Boot app listens on inside the pod
+      nodePort: 30081          # Port on the Minikube node (access via: minikube-ip:30081)
+                               # Must be between 30000–32767
+
+# ============================================================
+# After deploying, access your app with:
+#   minikube service helpdesk-service --url
+# This gives you a URL like: http://192.168.49.2:30081
+# ============================================================

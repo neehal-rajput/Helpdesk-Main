@@ -1,0 +1,24 @@
+# ============================================================
+# mysql-service.yaml
+# Creates a stable network address for the MySQL pod.
+# Without this, the app cannot find MySQL because pod IPs change.
+# The service gives a fixed DNS name: "mysql-service"
+# So the app connects to "mysql-service:3306" — never to an IP.
+# ============================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service          # ← THIS NAME must match DB_HOST in configmap.yaml
+  namespace: default
+  labels:
+    app: mysql
+spec:
+  type: ClusterIP              # ClusterIP = only reachable INSIDE the cluster (correct for DB)
+  selector:
+    app: mysql                 # Forward traffic to pods with label app=mysql
+  ports:
+    - name: mysql
+      protocol: TCP
+      port: 3306               # Port that OTHER services use to reach MySQL
+      targetPort: 3306         # Port MySQL is actually listening on inside the pod

@@ -1,0 +1,20 @@
+# ============================================================
+# configmap.yaml
+# Stores NON-SENSITIVE configuration values.
+# Think of it as a shared settings file that all pods can read.
+# ============================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helpdesk-config       # Name used to reference this ConfigMap
+  namespace: default           # The Kubernetes namespace (default = no special grouping)
+  labels:
+    app: helpdesk              # Label for easy filtering/searching
+data:
+  # These values are passed as environment variables into the app container
+  DB_HOST: "mysql-service"     # MySQL service name (matches mysql-service.yaml metadata.name)
+  DB_PORT: "3306"              # MySQL default port
+  DB_NAME: "helpdesk_db"      # Database name (same as in application.properties)
+  SERVER_PORT: "8081"          # Port your Spring Boot app runs on
+  APP_NAME: "helpdesk-ticketing-system"

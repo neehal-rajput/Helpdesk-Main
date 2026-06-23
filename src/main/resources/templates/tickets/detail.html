@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title th:text="'Ticket #' + ${ticket.ticketId} + ' | HelpDesk Pro'">Ticket</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <th:block th:replace="~{fragments/layout :: globalStyles}"></th:block>
+</head>
+<body>
+<div class="d-flex">
+  <th:block th:replace="~{fragments/layout :: sidebar}"></th:block>
+  <div id="main-content" class="flex-grow-1">
+    <div class="topbar">
+      <h1 class="topbar-title">
+        <i class="fas fa-ticket-alt me-2 text-primary"></i>
+        Ticket <span th:text="'#' + ${ticket.ticketId}">#1</span>
+      </h1>
+      <div class="d-flex gap-2">
+        <a th:href="@{/tickets/{id}/edit(id=${ticket.ticketId})}" class="btn btn-outline-primary btn-sm"
+           sec:authorize="hasAnyRole('ADMIN','AGENT')">
+          <i class="fas fa-edit me-1"></i>Edit
+        </a>
+        <a th:href="@{/tickets}" class="btn btn-outline-secondary btn-sm">
+          <i class="fas fa-arrow-left me-1"></i>Back
+        </a>
+      </div>
+    </div>
+
+    <div class="content-area">
+      <div th:if="${success}" class="alert alert-success alert-dismissible fade show">
+        <i class="fas fa-check-circle me-2"></i><span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+        <i class="fas fa-exclamation-circle me-2"></i><span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+
+      <div class="row g-3">
+        <!-- Main ticket info -->
+        <div class="col-lg-8">
+          <div class="card mb-3">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+                <h4 class="fw-700 mb-0" th:text="${ticket.title}">Ticket Title</h4>
+                <div class="d-flex gap-2">
+                  <span class="badge rounded-pill px-3 py-2"
+                        th:classappend="'badge-priority-' + ${#strings.toLowerCase(ticket.priority)}"
+                        th:text="${ticket.priority}">MEDIUM</span>
+                  <span class="badge rounded-pill px-3 py-2"
+                        th:classappend="'badge-status-' + ${#strings.toLowerCase(ticket.status)}"
+                        th:text="${#strings.replace(ticket.status.toString(), '_', ' ')}">OPEN</span>
+                </div>
+              </div>
+              <hr class="my-3"/>
+              <h6 class="text-muted small text-uppercase fw-600 mb-2">Description</h6>
+              <p class="mb-0" style="white-space:pre-line;line-height:1.7;" th:text="${ticket.description}">Description here</p>
+            </div>
+          </div>
+
+          <!-- Resolution notes (if resolved) -->
+          <div class="card mb-3" th:if="${ticket.resolution != null}">
+            <div class="card-header" style="background:#d1fae5;color:#065f46;">
+              <i class="fas fa-check-circle me-2"></i>Resolution
+            </div>
+            <div class="card-body">
+              <p th:text="${ticket.resolution.resolutionNotes}" style="white-space:pre-line;"></p>
+              <small class="text-muted">
+                Resolved by <strong th:text="${ticket.resolution.resolvedBy?.name}"></strong>
+                on <span th:text="${#temporals.format(ticket.resolution.resolvedDate, 'dd MMM yyyy HH:mm')}"></span>
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar panel -->
+        <div class="col-lg-4">
+          <!-- Details card -->
+          <div class="card mb-3">
+            <div class="card-header"><i class="fas fa-info-circle me-2 text-primary"></i>Details</div>
+            <div class="card-body p-0">
+              <table class="table table-sm mb-0">
+                <tr>
+                  <td class="text-muted fw-500 ps-3" style="width:45%;font-size:.8rem;">Ticket ID</td>
+                  <td class="fw-600" th:text="'#' + ${ticket.ticketId}">#1</td>
+                </tr>
+                <tr>
+                  <td class="text-muted fw-500 ps-3" style="font-size:.8rem;">Status</td>
+                  <td>
+                    <span class="badge rounded-pill"
+                          th:classappend="'badge-status-' + ${#strings.toLowerCase(ticket.status)}"
+                          th:text="${#strings.replace(ticket.status.toString(),'_',' ')}">OPEN</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="text-muted fw-500 ps-3" style="font-size:.8rem;">Priority</td>
+                  <td>
+                    <span class="badge rounded-pill"
+                          th:classappend="'badge-priority-' + ${#strings.toLowerCase(ticket.priority)}"
+                          th:text="${ticket.priority}">MEDIUM</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="text-muted fw-500 ps-3" style="font-size:.8rem;">Submitted By</td>
+                  <td th:text="${ticket.user?.name}">User</td>
+                </tr>
+                <tr>
+                  <td class="text-muted fw-500 ps-3" style="font-size:.8rem;">Created</td>
+                  <td th:text="${#temporals.format(ticket.createdDate, 'dd MMM yyyy')}">Date</td>
+                </tr>
+                <tr th:if="${ticket.updatedDate != null}">
+                  <td class="text-muted fw-500 ps-3" style="font-size:.8rem;">Updated</td>
+                  <td th:text="${#temporals.format(ticket.updatedDate, 'dd MMM yyyy')}">Date</td>
+                </tr>
+                <tr th:if="${ticket.assignment != null}">
+                  <td class="text-muted fw-500 ps-3" style="font-size:.8rem;">Assigned To</td>
+                  <td th:text="${ticket.assignment.assignedTo?.name}">Agent</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+
+          <!-- Update Status (Admin/Agent) -->
+          <div class="card mb-3" sec:authorize="hasAnyRole('ADMIN','AGENT')">
+            <div class="card-header"><i class="fas fa-exchange-alt me-2 text-warning"></i>Update Status</div>
+            <div class="card-body">
+              <form th:action="@{/tickets/{id}/status(id=${ticket.ticketId})}" method="post">
+                <div class="input-group input-group-sm">
+                  <select name="status" class="form-select">
+                    <option th:each="s : ${statuses}"
+                            th:value="${s}"
+                            th:text="${#strings.replace(s.toString(),'_',' ')}"
+                            th:selected="${s == ticket.status}">STATUS</option>
+                  </select>
+                  <button class="btn btn-warning text-white" type="submit">Update</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Assign Ticket (Admin only) -->
+          <div class="card mb-3" sec:authorize="hasRole('ADMIN')"
+               th:if="${ticket.assignment == null}">
+            <div class="card-header"><i class="fas fa-user-tag me-2 text-info"></i>Assign to Agent</div>
+            <div class="card-body">
+              <form th:action="@{/tickets/{id}/assign(id=${ticket.ticketId})}" method="post">
+                <div class="mb-2">
+                  <select name="agentId" class="form-select form-select-sm" required>
+                    <option value="">-- Select Agent --</option>
+                    <option th:each="a : ${agents}" th:value="${a.userId}" th:text="${a.name}"></option>
+                  </select>
+                </div>
+                <button class="btn btn-info text-white btn-sm w-100" type="submit">
+                  <i class="fas fa-user-check me-1"></i>Assign
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div class="card mb-3" sec:authorize="hasRole('ADMIN')"
+               th:if="${ticket.assignment != null}">
+            <div class="card-header" style="background:#dbeafe;color:#1e40af;">
+              <i class="fas fa-user-check me-2"></i>Assigned
+            </div>
+            <div class="card-body text-center">
+              <div class="avatar mx-auto mb-2" style="width:40px;height:40px;background:#4f46e5;color:#fff;"
+                   th:text="${#strings.substring(ticket.assignment.assignedTo?.name ?: 'A', 0, 1).toUpperCase()}">A</div>
+              <div class="fw-600" th:text="${ticket.assignment.assignedTo?.name}">Agent</div>
+              <div class="text-muted small" th:text="${ticket.assignment.assignedTo?.email}">email</div>
+              <div class="text-muted" style="font-size:.75rem;margin-top:.25rem;"
+                   th:text="'Since ' + ${#temporals.format(ticket.assignment.assignedDate, 'dd MMM yyyy')}"></div>
+            </div>
+          </div>
+
+          <!-- Resolve Ticket (Admin/Agent) -->
+          <div class="card" sec:authorize="hasAnyRole('ADMIN','AGENT')"
+               th:if="${ticket.status.name() != 'RESOLVED' and ticket.status.name() != 'CLOSED'}">
+            <div class="card-header"><i class="fas fa-check me-2 text-success"></i>Resolve Ticket</div>
+            <div class="card-body">
+              <form th:action="@{/tickets/{id}/resolve(id=${ticket.ticketId})}" method="post">
+                <div class="mb-2">
+                  <textarea name="resolutionNotes" class="form-control form-control-sm"
+                            rows="3" placeholder="Resolution notes..." required></textarea>
+                </div>
+                <button class="btn btn-success btn-sm w-100" type="submit">
+                  <i class="fas fa-check-circle me-1"></i>Mark Resolved
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Delete (Admin) -->
+          <div class="mt-3" sec:authorize="hasRole('ADMIN')">
+            <form th:action="@{/tickets/{id}/delete(id=${ticket.ticketId})}" method="post"
+                  onsubmit="return confirm('Permanently delete this ticket?')">
+              <button class="btn btn-outline-danger btn-sm w-100">
+                <i class="fas fa-trash me-1"></i>Delete Ticket
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  setTimeout(() => { document.querySelectorAll('.alert-dismissible').forEach(a => { try { bootstrap.Alert.getOrCreateInstance(a).close(); } catch(e){} }); }, 4000);
+</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+# ============================================================
+# deployment.yaml
+# Deploys your Spring Boot HelpDesk application as a pod.
+# It reads DB credentials from Secret and config from ConfigMap.
+# Spring Boot automatically reads env vars like SPRING_DATASOURCE_URL
+# and uses them to override values in application.properties.
+# ============================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helpdesk-app           # Name of this Deployment
+  namespace: default
+  labels:
+    app: helpdesk-app
+spec:
+  replicas: 1                  # Run 1 copy of the app (increase for load balancing)
+  selector:
+    matchLabels:
+      app: helpdesk-app
+  template:
+    metadata:
+      labels:
+        app: helpdesk-app
+    spec:
+      containers:
+        - name: helpdesk-app
+          image: helpdesk-app:latest    # Docker image built by Jenkins (Dockerfile)
+          imagePullPolicy: Never        # IMPORTANT for Minikube: use locally built image,
+                                        # don't try to download from Docker Hub
+
+          ports:
+            - containerPort: 8081       # Port your Spring Boot app runs on
+
+          # -------------------------------------------------------
+          # Environment Variables
+          # Spring Boot reads these and overrides application.properties
+          # Pattern: SPRING_DATASOURCE_URL overrides spring.datasource.url
+          # -------------------------------------------------------
+          env:
+            # Full JDBC URL pointing to MySQL service (not localhost!)
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql-service:3306/helpdesk_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true"
+
+            # Database username - from Secret
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: helpdesk-secrets
+                  key: DB_USERNAME
+
+            # Database password - from Secret
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: helpdesk-secrets
+                  key: DB_PASSWORD
+
+            # App port - from ConfigMap
+            - name: SERVER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: helpdesk-config
+                  key: SERVER_PORT
+
+          # Resource limits
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+          # -------------------------------------------------------
+          # Health Checks
+          # Kubernetes uses these to know if the app is ready/alive
+          # Uses your /actuator/health endpoint (already in application.properties)
+          # -------------------------------------------------------
+
+          # Readiness Probe: "Is the app ready to receive traffic?"
+          # Kubernetes won't send requests until this passes
+          readinessProbe:
+            httpGet:
+              path: /actuator/health   # Your Spring Actuator health endpoint
+              port: 8081
+            initialDelaySeconds: 60    # Wait 60s before first check (app takes time to start)
+            periodSeconds: 10          # Check every 10 seconds
+            failureThreshold: 6        # Mark as not-ready after 6 consecutive failures
+
+          # Liveness Probe: "Is the app still alive (not frozen/crashed)?"
+          # Kubernetes will restart the pod if this fails
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 90    # Wait 90s before first check
+            periodSeconds: 30          # Check every 30 seconds
+            failureThreshold: 3        # Restart pod after 3 consecutive failures

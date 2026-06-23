@@ -1,0 +1,64 @@
+# ============================================================
+# mysql-deployment.yaml
+# Deploys a MySQL 8.0 database as a pod inside Kubernetes.
+# This replaces the MySQL you normally run locally.
+# ============================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql                  # Name of this Deployment
+  namespace: default
+  labels:
+    app: mysql
+spec:
+  replicas: 1                  # Run 1 copy of MySQL (only 1 needed for DB)
+  selector:
+    matchLabels:
+      app: mysql               # This Deployment manages pods with label app=mysql
+  template:                    # Blueprint for the MySQL pod
+    metadata:
+      labels:
+        app: mysql             # Must match 'selector.matchLabels' above
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0     # Official MySQL 8.0 Docker image
+          ports:
+            - containerPort: 3306   # MySQL listens on port 3306 inside the container
+
+          # Environment variables passed into the MySQL container
+          env:
+            # Root password - pulled from Secret (not hardcoded here for security)
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: helpdesk-secrets    # Name of our Secret file
+                  key: DB_PASSWORD
+
+            # Auto-create this database when MySQL starts
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: helpdesk-config     # Name of our ConfigMap
+                  key: DB_NAME
+
+          # Resource limits (prevents MySQL from eating all server memory/CPU)
+          resources:
+            requests:             # Minimum resources guaranteed to this pod
+              memory: "256Mi"     # 256 megabytes RAM
+              cpu: "250m"         # 0.25 CPU core (250 millicores)
+            limits:               # Maximum resources this pod can use
+              memory: "512Mi"
+              cpu: "500m"
+
+          # Where MySQL stores its data inside the container
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+
+      # Storage volume - emptyDir is simple and works in Minikube
+      # Note: Data is lost if the pod restarts (fine for dev/demo, use PVC in production)
+      volumes:
+        - name: mysql-data
+          emptyDir: {}
